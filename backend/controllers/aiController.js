@@ -64,9 +64,9 @@ exports.getAIRecommendation = async (req, res) => {
         }
 
         if (!aiResponse) {
+            const errorMsg = lastError?.message || lastError?.error?.message || JSON.stringify(lastError) || 'Unknown OpenRouter Error';
             return res.status(500).json({ 
-                msg: 'AI Service currently overloaded or rate-limited. Please try again in a few moments.',
-                error: lastError 
+                msg: `AI Service Error: ${errorMsg}. Please check that OPENROUTER_API_KEY is correctly set in your Render environment variables.`
             });
         }
 
