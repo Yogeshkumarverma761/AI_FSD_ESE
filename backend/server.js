@@ -12,10 +12,7 @@ const app = express();
 
 // Security Middlewares
 app.use(helmet());
-app.use(cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
-    credentials: true
-}));
+app.use(cors());
 app.use(express.json());
 
 // Rate Limiting (Protects AI endpoint and others from spam/DDoS)
