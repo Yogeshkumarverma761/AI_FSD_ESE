@@ -27,9 +27,9 @@ exports.getAIRecommendation = async (req, res) => {
 
         // Robust model rotation/fallbacks (incase one is rate-limited or down)
         const models = [
-            'minimax/minimax-m2.5:free',
             'google/gemini-2.5-flash:free',
             'meta-llama/llama-3.3-70b-instruct:free',
+            'minimax/minimax-m2.5:free',
             'deepseek/deepseek-r1:free'
         ];
 
