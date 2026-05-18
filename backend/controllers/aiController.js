@@ -25,18 +25,50 @@ exports.getAIRecommendation = async (req, res) => {
             promptText += `Employee ${index + 1}: Name: ${emp.name}, Department: ${emp.department}, Skills: ${emp.skills.join(', ')}, Performance Score: ${emp.performanceScore}/100, Experience: ${emp.experience} years.\n`;
         });
 
-        // Call OpenRouter API
-        const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-            model: 'minimax/minimax-m2.5:free', // Using the specified free model
-            messages: [{ role: 'user', content: promptText }]
-        }, {
-            headers: {
-                'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-                'Content-Type': 'application/json'
-            }
-        });
+        // Robust model rotation/fallbacks (incase one is rate-limited or down)
+        const models = [
+            'minimax/minimax-m2.5:free',
+            'google/gemini-2.5-flash:free',
+            'meta-llama/llama-3.3-70b-instruct:free',
+            'deepseek/deepseek-r1:free'
+        ];
 
-        const aiResponse = response.data.choices[0].message.content;
+        let aiResponse = null;
+        let lastError = null;
+
+        for (const model of models) {
+            try {
+                console.log(`Attempting to generate insights using OpenRouter model: ${model}`);
+                const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+                    model: model,
+                    messages: [{ role: 'user', content: promptText }]
+                }, {
+                    headers: {
+                        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                        'Content-Type': 'application/json',
+                        'HTTP-Referer': 'https://render.com',
+                        'X-Title': 'AI Employee Performance Tracker'
+                    },
+                    timeout: 10000 // 10 second timeout per model attempt
+                });
+
+                if (response.data?.choices?.[0]?.message?.content) {
+                    aiResponse = response.data.choices[0].message.content;
+                    console.log(`Successfully generated insights using model: ${model}`);
+                    break;
+                }
+            } catch (err) {
+                console.error(`Failed using model ${model}:`, err.response?.data || err.message);
+                lastError = err.response?.data || err.message;
+            }
+        }
+
+        if (!aiResponse) {
+            return res.status(500).json({ 
+                msg: 'AI Service currently overloaded or rate-limited. Please try again in a few moments.',
+                error: lastError 
+            });
+        }
 
         res.json({ recommendation: aiResponse });
     } catch (err) {
